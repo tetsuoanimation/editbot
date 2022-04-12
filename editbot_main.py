@@ -318,7 +318,9 @@ class Edit:
         self.frameoffset=min([clip.in_frame for clip in self.edit])
         return self.edit
     
-    def findFootage(self, source_folder: str, latest=True, keepClipLengths=False):
+    def findFootage(self, source_folder: str=None, latest=True, keepClipLengths=False):
+        if source_folder==None:
+            source_folder=self.source_folder
         for clip in self.edit:
             clip.findFootage(source_folder, latest=latest, durationFromClip=keepClipLengths)
         self.check_ready()
