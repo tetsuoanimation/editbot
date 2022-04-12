@@ -157,7 +157,7 @@ class Clip:
         if latest:
             print('Searching Latest Clip footage for {} in {}'.format(self.name, footage_source_path))
             searchpath = Path(footage_source_path)
-            videofiles_in_folder = [vf for vf in searchpath.iterdir() if vf.is_file() and mimetypes.guess_type(vf)[0].startswith('video/')]
+            videofiles_in_folder = [vf for vf in searchpath.rglob("*") if vf.is_file() and mimetypes.guess_type(vf)[0].startswith('video/')]
             footageClips=[]
             for file in videofiles_in_folder:
                 #print(os.path.basename(str(file)))  
