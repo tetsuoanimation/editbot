@@ -53,15 +53,15 @@ class ShotMask:
 
         if mode == "clip":
             drawtextfilter=(
-                "drawtext=fontsize={fontsize_small}:fontcolor=white:fontfile='/Windows/Fonts/arial.ttf':text='{pass_name}':x=(w-text_w)/2:y=({mask_size}/2)-(text_h/2)[0];"
-                "[0]drawtext=fontsize={fontsize_large}:fontcolor=white:fontfile='/Windows/Fonts/arial.ttf':text='{shot_name}':x=w-text_w-{mask_padding}:y=({mask_size}/2)-(text_h/2)[0];"
-                "[0]drawtext=fontsize={fontsize_small}:fontcolor=white:fontfile='/Windows/Fonts/arial.ttf':text='{shot_date}':x={mask_padding}:y=h-(text_h/2)-({mask_size}/3)[0];"
-                "[0]drawtext=fontsize={fontsize_large}:fontcolor=white:fontfile='/Windows/Fonts/arial.ttf':text='%{{frame_num}}':start_number={start_frame}:x=w-text_w-{mask_padding}:y=h-(text_h/2)-({mask_size}/2)[0];"
-                "[0]drawtext=fontsize={fontsize_small}:fontcolor=white:fontfile='/Windows/Fonts/arial.ttf':text={shot_file_name}':x={mask_padding}:y=h-(text_h/2)-(({mask_size}/3)*2)"
+                "drawtext=fontsize={fontsize_small}:fontcolor=white:fontfile='C\\:/Windows/fonts/consola.ttf':text='{pass_name}':x=(w-text_w)/2:y=({mask_size}/2)-(text_h/2)[0];"
+                "[0]drawtext=fontsize={fontsize_large}:fontcolor=white:fontfile='C\\:/Windows/fonts/consola.ttf':text='{shot_name}':x=w-text_w-{mask_padding}:y=({mask_size}/2)-(text_h/2)[0];"
+                "[0]drawtext=fontsize={fontsize_small}:fontcolor=white:fontfile='C\\:/Windows/fonts/consola.ttf':text='{shot_date}':x={mask_padding}:y=h-(text_h/2)-({mask_size}/3)[0];"
+                "[0]drawtext=fontsize={fontsize_large}:fontcolor=white:fontfile='C\\:/Windows/fonts/consola.ttf':text='%{{frame_num}}':start_number={start_frame}:x=w-text_w-{mask_padding}:y=h-(text_h/2)-({mask_size}/2)[0];"
+                "[0]drawtext=fontsize={fontsize_small}:fontcolor=white:fontfile='C\\:/Windows/fonts/consola.ttf':text={shot_file_name}':x={mask_padding}:y=h-(text_h/2)-(({mask_size}/3)*2)"
             ).format(fontsize_small=self.fontsize_small, fontsize_large=self.fontsize_large, mask_size=self.mask_size, mask_padding=self.mask_padding, start_frame=self.in_frame, pass_name=self.pass_name, shot_name=self.shot_name, shot_date=self.date, shot_file_name=os.path.basename(self.file_name))
         elif mode == "sequence":
             drawtextfilter=(
-                "drawtext=fontsize={fontsize_small}:fontcolor=white:fontfile='/Windows/Fonts/arial.ttf':timecode='00\:00\:00\:00':rate={fps}:x=(w-text_w)/2:y=h-(text_h/2)-({mask_size}/2)"
+                "drawtext=fontsize={fontsize_small}:fontcolor=white:fontfile='C\\:/Windows/fonts/consola.ttf':timecode='00\:00\:00\:00':rate={fps}:x=(w-text_w)/2:y=h-(text_h/2)-({mask_size}/2)"
             ).format(fontsize_small=self.fontsize_small, fontsize_large=self.fontsize_large, fps=self.fps, mask_size=self.mask_size, mask_padding=self.mask_padding)
         else:
              drawtextfiler=""
@@ -155,7 +155,7 @@ class Clip:
 
     def findFootage(self, footage_source_path: str, latest: bool=True, durationFromClip=False):
         if latest:
-            print('Searching Latest Clip footage for {} in {}'.format(self.name, footage_source_path))
+            # print('Searching Latest Clip footage for {} in {}'.format(self.name, footage_source_path))
             searchpath = Path(footage_source_path)
             videofiles_in_folder = [vf for vf in searchpath.rglob("*") if vf.is_file() and mimetypes.guess_type(vf)[0].startswith('video/')]
             footageClips=[]
@@ -174,6 +174,7 @@ class Clip:
             if durationFromClip:
                 self.duration=self.getDuration()
             self.check_ready()
+            # print("Found {}".format(latest_clip))
             return latest_clip
         else:
             print('Only latest clip is currently implemented')
@@ -188,7 +189,7 @@ class Clip:
             if out_fps.lower()=='nochange':
                 out_fps=self.fps
         if not self.ready:
-            print('Clip {} not ready, skipping conversion!'.format(self.shot_name))
+            print('Clip {} not ready, skipping conversion!'.format(self.name))
             return False
         if self.shotmask.logo_path:
             ffmpeg_cmd = (
@@ -327,8 +328,8 @@ class Edit:
 
     def preconvertClips(self, tempfolder: str='') ->str:
         if any(not c.ready for c in self.edit):
-            print('Edit is not ready to batch convert, are all clips ready?')
-            return None
+            print('Not all clips are ready, output will not be correct')
+            # return None
         if not tempfolder:
             tempfolder = tempfile.mkdtemp(prefix='py_autoedit_')
         else:
