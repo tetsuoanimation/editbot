@@ -330,29 +330,35 @@ class Slate(Clip):
 
     def generateFilterString(self):
         color='DarkSlateGray'
+        grid_ratio=self.clip_size[1]/5
+        
         fontsize_title = self.clip_size[1]/15
         fontsize_subtitle = self.clip_size[1]/35
         fontsize_text = self.clip_size[1]/45
-        grid_ratio=self.clip_size[1]/5
+
+        logo_size=grid_ratio/1.5
+        logo_padding=grid_ratio/2
+
         text_leading=grid_ratio/20
-        text_offset=grid_ratio*2
+        text_offset_y=logo_size+logo_padding*2
+        text_offset_x=logo_size+logo_padding*2
 
         background="color={color}:{width}x{height}:r={fps}".format(color=color, width=self.clip_size[0], height=self.clip_size[1], fps=self.fps )
-        logofilter="[0:v]scale=h={logo_size}:force_original_aspect_ratio=1".format(logo_size=grid_ratio) if self.config.shot_mask_logo_path else ""
-        logooverlay="overlay=x={logo_padding}:y={logo_padding}".format(logo_padding=self.clip_size[1]/10) if self.config.shot_mask_logo_path else ""
+        logofilter="[0:v]scale=h={logo_size}:force_original_aspect_ratio=1".format(logo_size=logo_size) if self.config.shot_mask_logo_path else ""
+        logooverlay="overlay=x={logo_padding}:y={logo_padding}".format(logo_padding=logo_padding) if self.config.shot_mask_logo_path else ""
         
-        current_offset=text_offset
+        current_offset=text_offset_y
 
         title="drawtext=fontsize={fontsize_title}:fontcolor=white:fontfile='C\\:/Windows/fonts/consola.ttf':text='{title}':x={x_ofs}:y={y_ofs}".format(
-            fontsize_title=fontsize_title, title=self.title, x_ofs=grid_ratio*2, y_ofs=grid_ratio*2)
+            fontsize_title=fontsize_title, title=self.title, x_ofs=text_offset_x, y_ofs=current_offset)
         current_offset+=fontsize_title
         
         subtitle="drawtext=fontsize={fontsize_subtitle}:fontcolor=white:fontfile='C\\:/Windows/fonts/consola.ttf':text='{pass_name}':x={x_ofs}:y={y_ofs}".format(
-            fontsize_subtitle=fontsize_subtitle, pass_name="Work in progress edit\: "+self.pass_name, x_ofs=(grid_ratio)*2, y_ofs=current_offset+text_leading)
+            fontsize_subtitle=fontsize_subtitle, pass_name="Work in progress edit\: "+self.pass_name, x_ofs=text_offset_x, y_ofs=current_offset+text_leading)
         current_offset+=text_leading+fontsize_subtitle
         
         date="drawtext=fontsize={fontsize_text}:fontcolor=white:fontfile='C\\:/Windows/fonts/consola.ttf':text='{date}':x={x_ofs}:y={y_ofs}".format(
-            fontsize_text=fontsize_text, date=datetime.date.today().strftime("%y-%m-%d"), x_ofs=grid_ratio*2, y_ofs=current_offset+text_leading)
+            fontsize_text=fontsize_text, date=datetime.date.today().strftime("%y-%m-%d"), x_ofs=text_offset_x, y_ofs=current_offset+text_leading)
         current_offset+=text_leading+fontsize_text
 
         current_offset+=text_leading*4
@@ -362,7 +368,7 @@ class Slate(Clip):
                 "drawtext=fontsize={fontsize_text}:fontcolor=white:fontfile='C\\:/Windows/fonts/consola.ttf':text='{notes_list}':x={x_ofs}:y={y_ofs}".format(
                     fontsize_text=fontsize_text, 
                     notes_list="- {}".format(note), 
-                    x_ofs=(grid_ratio)*2, 
+                    x_ofs=text_offset_x, 
                     y_ofs=current_offset+(text_leading*i)+(fontsize_text*i)
                     )
             )
@@ -648,9 +654,9 @@ if __name__ == "__main__":
     # keepClipLengths=True overwrites duration and in_frames to use the full source clip lengths ( minus handles )
     # edit_custom.findFootage(r'C:\Users\chris\Desktop\testfootage', latest=True, keepClipLengths=True)
     # conforms edit to the duration set in the clip objects
-    edit_custom.conformEdit(mode='duration')
+    # edit_custom.conformEdit(mode='duration')
     # conforms edit to the cutpoints marked in the in_frame property of the clip objects
-    # edit_custom.conformEdit(mode='in_frame')
+    edit_custom.conformEdit(mode='in_frame')
     edit_custom.preconvertClips()
 
     print(edit_custom.fastbuild(r'C:\Users\chris\Desktop\ffmpegFastBuildTest.mp4'))
