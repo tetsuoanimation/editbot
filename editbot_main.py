@@ -1,6 +1,6 @@
 import os, json, datetime, subprocess, re, mimetypes, tempfile, shutil
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from pathlib import Path
 
 @dataclass
@@ -263,6 +263,135 @@ class Clip:
         return duration
 
 @dataclass
+class Slate(Clip):
+    # config: Config
+    in_frame: int=0
+    # duration: float=5
+    # clip_size: tuple=(1920,1080)
+    title: str="Slate"
+    notes: List[str]=List
+    # pass_name: str=''
+    # fps: int=field(init=False)
+    # ready: bool=field(init=False)
+    # converted_clip_path: str=field(init=False)
+    # ready: bool=field(init=False)
+
+    def __post_init__(self):
+        self.name='slate_{}'.format("".join( x for x in self.title if (x.isalnum() or x in "_")))
+        self._clip_path: Path=None
+        self.ready=False
+        self.converted_clip_path: Path=Path()
+        self.is_converted=False
+        self.fps=self.config.fps
+        self.frame_handles_in=0
+        self.shotmask = None
+        self.clip_size=self.config.clip_size
+        self.check_ready()
+
+    def check_ready(self):
+        if self.fps>0 and self.duration>0.0 and self.title:
+            self.ready=True
+        else:
+            self.ready=False
+    
+    def convertClip(self, output_path:str, ffmpeg_bin:str='', out_fps: Any=None) ->bool: 
+        if not ffmpeg_bin:
+            ffmpeg_bin=self.config.ffmpeg_bin
+        if not out_fps:
+            out_fps=self.config.fps
+        if type(out_fps)==str:
+            if out_fps.lower()=='nochange':
+                out_fps=self.fps
+        if not self.ready:
+            print('Slate {} not ready, skipping conversion!'.format(self.title))
+            return False
+        ffmpeg_cmd = (
+            "{ffmpeg_bin} -y -hide_banner -stats -loglevel error "
+            "-i {logo_path} "
+            "-filter_complex {filter_string} "
+            "-t {duration} "
+            "-r {out_fps} "
+            "{output_name}"
+        ).format(
+            fps=self.fps,
+            ffmpeg_bin=ffmpeg_bin, 
+            logo_path=self.config.shot_mask_logo_path, 
+            filter_string=self.generateFilterString(), 
+            duration=str(datetime.timedelta(seconds=self.duration)),
+            out_fps=out_fps, 
+            output_name=output_path
+            )
+
+        subprocess.call(ffmpeg_cmd)
+        
+        self.converted_clip_path=Path(output_path)
+        self.check_converted()
+        return True
+
+    def generateFilterString(self):
+        color='DarkSlateGray'
+        fontsize_title = self.clip_size[1]/15
+        fontsize_subtitle = self.clip_size[1]/35
+        fontsize_text = self.clip_size[1]/45
+        grid_ratio=self.clip_size[1]/5
+        text_leading=grid_ratio/20
+        text_offset=grid_ratio*2
+
+        background="color={color}:{width}x{height}:r={fps}".format(color=color, width=self.clip_size[0], height=self.clip_size[1], fps=self.fps )
+        logofilter="[0:v]scale=h={logo_size}:force_original_aspect_ratio=1".format(logo_size=grid_ratio) if self.config.shot_mask_logo_path else ""
+        logooverlay="overlay=x={logo_padding}:y={logo_padding}".format(logo_padding=self.clip_size[1]/10) if self.config.shot_mask_logo_path else ""
+        
+        current_offset=text_offset
+
+        title="drawtext=fontsize={fontsize_title}:fontcolor=white:fontfile='C\\:/Windows/fonts/consola.ttf':text='{title}':x={x_ofs}:y={y_ofs}".format(
+            fontsize_title=fontsize_title, title=self.title, x_ofs=grid_ratio*2, y_ofs=grid_ratio*2)
+        current_offset+=fontsize_title
+        
+        subtitle="drawtext=fontsize={fontsize_subtitle}:fontcolor=white:fontfile='C\\:/Windows/fonts/consola.ttf':text='{pass_name}':x={x_ofs}:y={y_ofs}".format(
+            fontsize_subtitle=fontsize_subtitle, pass_name="Work in progress edit\: "+self.pass_name, x_ofs=(grid_ratio)*2, y_ofs=current_offset+text_leading)
+        current_offset+=text_leading+fontsize_subtitle
+        
+        date="drawtext=fontsize={fontsize_text}:fontcolor=white:fontfile='C\\:/Windows/fonts/consola.ttf':text='{date}':x={x_ofs}:y={y_ofs}".format(
+            fontsize_text=fontsize_text, date=datetime.date.today().strftime("%y-%m-%d"), x_ofs=grid_ratio*2, y_ofs=current_offset+text_leading)
+        current_offset+=text_leading+fontsize_text
+
+        current_offset+=text_leading*4
+        notes=[]
+        for i, note in enumerate(self.notes):
+            notes.append(
+                "drawtext=fontsize={fontsize_text}:fontcolor=white:fontfile='C\\:/Windows/fonts/consola.ttf':text='{notes_list}':x={x_ofs}:y={y_ofs}".format(
+                    fontsize_text=fontsize_text, 
+                    notes_list="- {}".format(note), 
+                    x_ofs=(grid_ratio)*2, 
+                    y_ofs=current_offset+(text_leading*i)+(fontsize_text*i)
+                    )
+            )
+        notes=','.join(notes)
+        
+        countdown_text="drawtext=fontsize={fontsize_title}:fontcolor=white:fontfile='C\\:/Windows/fonts/consola.ttf':text='{title}':x={x_ofs}:y={y_ofs}".format(
+            fontsize_title=fontsize_title,
+            # title='%{eif\\:(t)\\:d}.%{eif\\:(mod(t, 1)*pow(10,0))\\:d\\:0}',
+            title='%{{eif\\:{duration}-(t)\\:d}}'.format(duration=self.duration),
+            x_ofs=self.clip_size[0]-(grid_ratio/2),
+            y_ofs=self.clip_size[1]-(grid_ratio/2)
+        )
+
+        return '"{background}[2];{logofilter}[1];[2][1]{logooverlay}[0];[0]{title}[0];[0]{date}[0];[0]{subtitle}[0];[0]{countdown_text}[0];[0]{notes}"'.format(
+            background=background, 
+            logofilter=logofilter, 
+            logooverlay=logooverlay,
+            title=title,
+            date=date,
+            subtitle=subtitle,
+            countdown_text=countdown_text,
+            notes=notes
+            )
+
+    def findFootage(self, footage_source_path: str, latest: bool=True, durationFromClip=False):
+        print('Slates currently do not support footage')
+        self.check_ready()
+
+@dataclass
 class Edit:
     config: Config
     shot_desc_path: str=''
@@ -492,11 +621,26 @@ if __name__ == "__main__":
         pass_name='First Pass Animation'
     )
 
+    slate1 = Slate(
+        config=config,
+        title='Testedit',
+        notes=[
+            'an edit for testing',
+            'does not include real data',
+            'temp audio pass',
+            'scenery is not built',
+            'if this actually runs, I\'m surprised'
+        ],
+        duration=5,
+        pass_name='Animation'
+    )
+
     edit_custom = Edit(config=config)
     # sequential = True means the edit won't care about the in_frame and just append the clip to the edit
     # edit_custom.addClip(clip1, sequential=True)
     # edit_custom.addClip(clip2, sequential=True)
     # sequential = False will make sure the cutpoints in in_frame are used
+    edit_custom.addClip(slate1, sequential=False)
     edit_custom.addClip(clip1, sequential=False)
     edit_custom.addClip(clip2, sequential=False)
     # this uses the definition in the clip object if it has not been overwritten
@@ -504,9 +648,9 @@ if __name__ == "__main__":
     # keepClipLengths=True overwrites duration and in_frames to use the full source clip lengths ( minus handles )
     # edit_custom.findFootage(r'C:\Users\chris\Desktop\testfootage', latest=True, keepClipLengths=True)
     # conforms edit to the duration set in the clip objects
-    # edit_custom.conformEdit(mode='duration')
+    edit_custom.conformEdit(mode='duration')
     # conforms edit to the cutpoints marked in the in_frame property of the clip objects
-    edit_custom.conformEdit(mode='in_frame')
+    # edit_custom.conformEdit(mode='in_frame')
     edit_custom.preconvertClips()
 
     print(edit_custom.fastbuild(r'C:\Users\chris\Desktop\ffmpegFastBuildTest.mp4'))
