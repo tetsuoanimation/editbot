@@ -9,6 +9,8 @@ class Config:
     ffprobe_bin: str
     shot_mask_logo_path: str
     clip_frame_handles: int
+    name: str='Edit'
+    default_pass_name: str='latest pass'
     enable_shotmask: bool=True
     clip_size: tuple=(1920,1080)
     fps: int=24
@@ -89,7 +91,7 @@ class Clip:
     duration: float=0
     frame_handles_in: int=None
     clip_size: tuple=(1920,1080)
-    pass_name: str='default clip pass'
+    pass_name: str=''
     name: str='S000'
     _clip_path: str = field(init=False)
     shotmask: ShotMask = field(init=False)
@@ -100,6 +102,8 @@ class Clip:
     ready: bool= field(init=False)
 
     def __post_init__(self):
+        if not self.pass_name:
+            self.pass_name=self.config.default_pass_name
         self._clip_path: Path=Path()
         self.ready=False
         self.converted_clip_path: Path=Path()
@@ -449,6 +453,7 @@ class Slate(Clip):
 @dataclass
 class Edit:
     config: Config
+    name: str=''
     shot_desc_path: str=''
     source_folder: str=''
     frameoffset: int= 0
@@ -458,6 +463,8 @@ class Edit:
     ready: bool= field(init=False)
 
     def __post_init__(self):
+        if not self.name:
+            self.name=self.config.name
         if self.shot_desc_path:
             self.edit=self.loadEdit(self.shot_desc_path)
             self.findFootage(self.source_folder, latest=True)
@@ -477,10 +484,11 @@ class Edit:
     def addAutoSlate(self):
         slate=Slate(
             config=config,
-            title='Edit',
+            title=self.name,
             notes=[
                 "size: {} x {}".format(self.config.clip_size[0], self.config.clip_size[1]),
                 "fps: {}".format(self.fps),
+                "pass: {}".format(self.config.default_pass_name)
                 "Source: {}".format(self.shot_desc_path),
                 "Footage Source: {}".format(self.source_folder)
             ],
@@ -661,7 +669,9 @@ if __name__ == "__main__":
 
     config = Config(
         ffmpeg_bin=r'C:\ffmpeg\bin\ffmpeg', 
-        ffprobe_bin=r'C:\ffmpeg\bin\ffprobe', 
+        ffprobe_bin=r'C:\ffmpeg\bin\ffprobe',
+        name='Test Edit',
+        default_pass_name='Latest Pass',
         enable_shotmask=True,
         shot_mask_logo_path=r'C:\01_Work\02_PersonalProjects\editbot\res\tetsuo_favicon.png' , 
         clip_frame_handles=1,
@@ -687,7 +697,7 @@ if __name__ == "__main__":
         # frame_handles_in=5,
         in_frame = 60,
         duration= 5,
-        pass_name='Layout'
+        # pass_name='Layout'
     )
 
     clip2 = Clip(
