@@ -30,6 +30,7 @@ class ShotMask:
     date: str='yyyy-mm-dd'
     fontsize_large: int=25
     fontsize_small: int=16
+    missing_frame_color: str='orange'
 
     # generates the filter string for ffmpeg - has two modes, 'clip' for the clip data and 'sequence' for the sequence data
     def generateFilterString(self, mode: str='') -> str:
@@ -42,9 +43,9 @@ class ShotMask:
         sizefilter=(
             "scale=w={width}:h={height}:force_original_aspect_ratio=1[0];"
             "[0]pad=width={width}:height={height}:x=-1:y=-1:color=black[0];"
-            "color=pink:{width}x{height}:r={fps}[c];"
+            "color={missing_frame_color}:{width}x{height}:r={fps}[c];"
             "[c][0]overlay=eof_action=pass"
-        ).format(width=self.scale[0], height=self.scale[1], logofilter=logofilter, fps=self.fps)
+        ).format(width=self.scale[0], height=self.scale[1], logofilter=logofilter, missing_frame_color=self.missing_frame_color, fps=self.fps)
         
         drawmaskfilter=(
             "drawbox=x=0:y=0:w=-1:h={mask_size}:color=black@{mask_opacity}:t=fill[0];"
@@ -94,6 +95,7 @@ class Clip:
     shotmask: ShotMask = field(init=False)
     fps: int= field(init=False)
     is_converted: bool= field(init=False)
+    is_missing_media: bool= field(init=False)
     converted_clip_path: str= field(init=False)
     ready: bool= field(init=False)
 
@@ -101,6 +103,7 @@ class Clip:
         self._clip_path: Path=Path()
         self.ready=False
         self.converted_clip_path: Path=Path()
+        self.is_missing_media=False
         self.is_converted=False
         self.fps=self.getFrameRate() if os.path.isfile(self.clip_path) else self.config.fps
         self.frame_handles_in=self.config.clip_frame_handles if not self.frame_handles_in else self.frame_handles_in
@@ -174,11 +177,38 @@ class Clip:
             if durationFromClip:
                 self.duration=self.getDuration()
             self.check_ready()
+            self.is_missing_media=False
             # print("Found {}".format(latest_clip))
             return latest_clip
         else:
             print('Only latest clip is currently implemented')
             return None
+
+    def generateMissingMediaFilter(self):
+        color='Red'
+        grid_ratio=self.clip_size[1]/5
+        
+        fontsize_title = self.clip_size[1]/15
+        fontsize_subtitle = self.clip_size[1]/35
+        fontsize_text = self.clip_size[1]/45
+
+        logo_size=grid_ratio/1.5
+        logo_padding=grid_ratio/2
+
+        text_leading=grid_ratio/20
+        text_offset_y=logo_size+logo_padding*2
+        text_offset_x=logo_size+logo_padding*2
+
+        current_offset=text_offset_y
+
+        background="color={color}:{width}x{height}:r={fps}".format(color=color, width=self.clip_size[0], height=self.clip_size[1], fps=self.fps )
+        missing_media_text="drawtext=fontsize={fontsize_title}:fontcolor=white:fontfile='C\\:/Windows/fonts/consola.ttf':text='{text}':x={x_ofs}:y={y_ofs}".format(
+            fontsize_title=fontsize_title, text="Missing Media {}".format(self.name), x_ofs=text_offset_x, y_ofs=current_offset)
+        
+        return '"{background}[0];[0]{missing_media_text}"'.format(
+            background=background,
+            missing_media_text=missing_media_text
+        )
 
     def convertClip(self, output_path:str, ffmpeg_bin:str='', out_fps: Any=None) ->bool: 
         if not ffmpeg_bin:
@@ -189,8 +219,26 @@ class Clip:
             if out_fps.lower()=='nochange':
                 out_fps=self.fps
         if not self.ready:
-            print('Clip {} not ready, skipping conversion!'.format(self.name))
-            return False
+            print('Clip {} not ready, creating missing media clip!'.format(self.name))
+            missing_media_out_name=Path(Path(output_path).parent,"missingMedia_{}.mp4".format(self.name))
+            ffmpeg_cmd = (
+                "{ffmpeg_bin} -y -hide_banner -stats -loglevel error "
+                "-filter_complex {filter_string} "
+                "-t {duration} "
+                "-r {out_fps} "
+                "{output_name}"
+            ).format(
+                ffmpeg_bin=ffmpeg_bin, 
+                filter_string=self.generateMissingMediaFilter(), 
+                duration=str(datetime.timedelta(seconds=self.duration+(self.frame_handles_in/self.fps))),
+                out_fps=out_fps, 
+                output_name=missing_media_out_name
+            )
+            subprocess.call(ffmpeg_cmd)
+
+            self.clip_path=Path(missing_media_out_name)
+            self.is_missing_media=True
+
         if self.shotmask.logo_path:
             ffmpeg_cmd = (
                 "{ffmpeg_bin} -y -hide_banner -stats -loglevel error "
@@ -286,6 +334,7 @@ class Slate(Clip):
         self.frame_handles_in=0
         self.shotmask = None
         self.clip_size=self.config.clip_size
+        self.is_missing_media=False
         self.check_ready()
 
     def check_ready(self):
@@ -367,7 +416,7 @@ class Slate(Clip):
             notes.append(
                 "drawtext=fontsize={fontsize_text}:fontcolor=white:fontfile='C\\:/Windows/fonts/consola.ttf':text='{notes_list}':x={x_ofs}:y={y_ofs}".format(
                     fontsize_text=fontsize_text, 
-                    notes_list="- {}".format(note), 
+                    notes_list="- {}".format(note.replace(':', '\\:')), 
                     x_ofs=text_offset_x, 
                     y_ofs=current_offset+(text_leading*i)+(fontsize_text*i)
                     )
@@ -408,12 +457,6 @@ class Edit:
     temp_folder: str= field(init=False)
     ready: bool= field(init=False)
 
-    def check_ready(self):
-        if len(self.edit)>0 and all([clip.ready for clip in self.edit]) and all([clip.is_converted for clip in self.edit]): 
-            self.ready=True
-        else:
-            self.ready=False
-
     def __post_init__(self):
         if self.shot_desc_path:
             self.edit=self.loadEdit(self.shot_desc_path)
@@ -424,6 +467,27 @@ class Edit:
             self.fps=self.config.fps
         self.temp_folder=None,
         self.check_ready()
+
+    def check_ready(self):
+        if len(self.edit)>0 and all([clip.ready for clip in self.edit]) and all([clip.is_converted for clip in self.edit]): 
+            self.ready=True
+        else:
+            self.ready=False
+
+    def addAutoSlate(self):
+        slate=Slate(
+            config=config,
+            title='Edit',
+            notes=[
+                "size: {} x {}".format(self.config.clip_size[0], self.config.clip_size[1]),
+                "fps: {}".format(self.fps),
+                "Source: {}".format(self.shot_desc_path),
+                "Footage Source: {}".format(self.source_folder)
+            ],
+            duration=self.frame_offset/self.fps,
+            pass_name='Edit'
+        )
+        self.addClip(slate, sequential=False)
 
     def addClip(self, clip: Clip, sequential: bool=True):
         if sequential:
@@ -463,7 +527,7 @@ class Edit:
 
     def preconvertClips(self, tempfolder: str='') ->str:
         if any(not c.ready for c in self.edit):
-            print('Not all clips are ready, output will not be correct')
+            print('Not all clips are ready, output will have missing media clips')
             # return None
         if not tempfolder:
             tempfolder = tempfile.mkdtemp(prefix='py_autoedit_')
@@ -476,14 +540,22 @@ class Edit:
         return tempfolder
     
     def conformEdit(self, mode='in_frame'):
-        '''conforms the clip durations and inframes to be continous. Has two modes: 'in_frame' conforms
-        everything to keep the values in in_frames in the clips while 'duration' adjusts the in_frame and out_frame of
-        all clips so the durations stay the same. Order will always be determined by in_frame'''
+        '''conforms the clip durations and inframes to be continous. Order will always be determined by in_frame
+        Has three modes: 
+        'in_frame' conforms everything to the in frame on the edit using the edits fps
+        'in_frame_clip' will use the clips fps to cut at that frame in the clip - if the clip is using different framerates than the edit, values don't match.
+        'duration' adjusts the in_frame and out_frame of all clips so the durations stay the same.'''
 
         self.edit.sort(key=lambda d: d.in_frame)
         self.frame_offset = min([c.in_frame for c in self.edit])
 
         if mode=='in_frame':
+            for i, clip in enumerate(self.edit):
+                if i<len(self.edit)-1:
+                    nextclip=self.edit[i+1]
+                    clip_framelen=nextclip.in_frame-clip.in_frame
+                    clip.duration=clip_framelen/self.fps
+        if mode=='in_frame_clip':
             for i, clip in enumerate(self.edit):
                 if i<len(self.edit)-1:
                     nextclip=self.edit[i+1]
@@ -614,7 +686,7 @@ if __name__ == "__main__":
         name = 'S010-020',
         # frame_handles_in=5,
         in_frame = 60,
-        duration= 1.5,
+        duration= 5,
         pass_name='Layout'
     )
 
@@ -625,6 +697,14 @@ if __name__ == "__main__":
         in_frame = 20,
         duration= 5,
         pass_name='First Pass Animation'
+    )
+
+    missing = Clip(
+        config=config,
+        name = 'S070',
+        in_frame = 80,
+        duration= 4,
+        pass_name='Missing Clip'
     )
 
     slate1 = Slate(
@@ -646,7 +726,8 @@ if __name__ == "__main__":
     # edit_custom.addClip(clip1, sequential=True)
     # edit_custom.addClip(clip2, sequential=True)
     # sequential = False will make sure the cutpoints in in_frame are used
-    edit_custom.addClip(slate1, sequential=False)
+    # edit_custom.addClip(slate1, sequential=False)
+    edit_custom.addClip(missing, sequential=False)
     edit_custom.addClip(clip1, sequential=False)
     edit_custom.addClip(clip2, sequential=False)
     # this uses the definition in the clip object if it has not been overwritten
@@ -657,6 +738,7 @@ if __name__ == "__main__":
     # edit_custom.conformEdit(mode='duration')
     # conforms edit to the cutpoints marked in the in_frame property of the clip objects
     edit_custom.conformEdit(mode='in_frame')
+    edit_custom.addAutoSlate()
     edit_custom.preconvertClips()
 
     print(edit_custom.fastbuild(r'C:\Users\chris\Desktop\ffmpegFastBuildTest.mp4'))
