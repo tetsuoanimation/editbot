@@ -483,7 +483,7 @@ class Edit:
 
     def addAutoSlate(self):
         slate=Slate(
-            config=config,
+            config=self.config,
             title=self.name,
             notes=[
                 "size: {} x {}".format(self.config.clip_size[0], self.config.clip_size[1]),
@@ -563,7 +563,7 @@ class Edit:
                     nextclip=self.edit[i+1]
                     clip_framelen=nextclip.in_frame-clip.in_frame
                     clip.duration=clip_framelen/self.fps
-        if mode=='in_frame_clip':
+        elif mode=='in_frame_clip':
             for i, clip in enumerate(self.edit):
                 if i<len(self.edit)-1:
                     nextclip=self.edit[i+1]
