@@ -488,12 +488,12 @@ class Edit:
             notes=[
                 "size: {} x {}".format(self.config.clip_size[0], self.config.clip_size[1]),
                 "fps: {}".format(self.fps),
-                "pass: {}".format(self.config.default_pass_name)
+                "pass: {}".format(self.config.default_pass_name),
                 "Source: {}".format(self.shot_desc_path),
                 "Footage Source: {}".format(self.source_folder)
             ],
             duration=self.frame_offset/self.fps,
-            pass_name='Edit'
+            pass_name=self.config.default_pass_name
         )
         self.addClip(slate, sequential=False)
 
