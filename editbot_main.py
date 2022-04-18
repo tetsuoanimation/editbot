@@ -681,18 +681,14 @@ if __name__ == "__main__":
     )
 
     # test edit from desc
-    edit = Edit(
-        config=config,
-        shot_desc_path=r"C:\01_Work\02_PersonalProjects\watchtower\watchtower\dist\static\projects\5c28af86-7550-11ec-a8d3-aea52421b16b\shots.json",
-        source_folder=r"C:\Users\Chris\Desktop\testfootage"
-        )
+    # edit = Edit(
+    #     config=config,
+    #     shot_desc_path=r"C:\01_Work\02_PersonalProjects\watchtower\watchtower\dist\static\projects\5c28af86-7550-11ec-a8d3-aea52421b16b\shots.json",
+    #     source_folder=r"C:\Users\Chris\Desktop\testfootage"
+    #     )
 
     # not needed, if a path is supplied, the constructor will load it automatically
     # edit.loadEdit(r"C:\01_Work\02_PersonalProjects\watchtower\watchtower\dist\static\projects\5c28af86-7550-11ec-a8d3-aea52421b16b\shots.json")
-
-    print(edit)
-    edit.addAutoSlate()
-    exit()
 
     #custom edit
     clip1 = Clip(
