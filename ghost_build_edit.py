@@ -8,7 +8,7 @@ if __name__ == '__main__':
         ffmpeg_bin=r"C:\Program Files\ffmpeg\bin\ffmpeg", 
         ffprobe_bin=r"C:\Program Files\ffmpeg\bin\ffprobe", 
         enable_shotmask=True,
-        shot_mask_logo_path=r"D:\AutomatedProjects\TechArt\TFPipeline\Code\editbot\res\tetsuo_favicon.png" , 
+        shot_mask_logo_path=r"D:\AutomatedProjects\TechArt\TFPipeline\Code\editbot\res\ttf_logo_white_noTagline.png" , 
         clip_frame_handles=1,
         fps=30
     )
