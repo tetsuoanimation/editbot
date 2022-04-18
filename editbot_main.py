@@ -491,8 +491,8 @@ class Edit:
                 "size: {} x {}".format(self.config.clip_size[0], self.config.clip_size[1]),
                 "fps: {}".format(self.fps),
                 "pass: {}".format(self.config.default_pass_name),
-                "Source: {}".format(self.shot_desc_path),
-                "Footage Source: {}".format(self.source_folder)
+                r"Source: {}".format(shot_desc_path_format),
+                r"Footage Source: {}".format(source_folder_format)
             ],
             duration=self.frame_offset/self.fps,
             pass_name=self.config.default_pass_name
