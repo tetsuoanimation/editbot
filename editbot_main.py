@@ -491,10 +491,10 @@ class Edit:
                 "size: {} x {}".format(self.config.clip_size[0], self.config.clip_size[1]),
                 "fps: {}".format(self.fps),
                 "pass: {}".format(self.config.default_pass_name),
-                r"Source: {}".format(shot_desc_path_format),
-                r"Footage Source: {}".format(source_folder_format)
+                "Source: {}".format(str(shot_desc_path_format).replace('\\', '\\\\')),
+                "Footage Source: {}".format(str(source_folder_format).replace('\\', '\\\\'))
             ],
-            duration=self.frame_offset/self.fps,
+            duration=self.frameoffset/self.fps,
             pass_name=self.config.default_pass_name
         )
         self.addClip(slate, sequential=False)
@@ -504,7 +504,7 @@ class Edit:
             clip_offset = sum([c.duration*c.fps for c in self.edit])
             clip.in_frame = clip_offset
         self.edit.append(clip)
-        frame_offset = min([c.in_frame for c in self.edit])
+        self.frameoffset = min([c.in_frame for c in self.edit])
         self.edit.sort(key=lambda d: d.in_frame)
         self.check_ready()
 
@@ -557,7 +557,7 @@ class Edit:
         'duration' adjusts the in_frame and out_frame of all clips so the durations stay the same.'''
 
         self.edit.sort(key=lambda d: d.in_frame)
-        self.frame_offset = min([c.in_frame for c in self.edit])
+        self.frameoffset = min([c.in_frame for c in self.edit])
 
         if mode=='in_frame':
             for i, clip in enumerate(self.edit):
@@ -680,17 +680,19 @@ if __name__ == "__main__":
         fps=30
     )
 
-    # # test edit from desc
-    # edit = Edit(
-    #     config=config,
-    #     shot_desc_path=r"C:\01_Work\02_PersonalProjects\watchtower\watchtower\dist\static\projects\5c28af86-7550-11ec-a8d3-aea52421b16b\shots.json",
-    #     source_folder=r"C:\Users\Chris\Desktop\testfootage"
-    #     )
+    # test edit from desc
+    edit = Edit(
+        config=config,
+        shot_desc_path=r"C:\01_Work\02_PersonalProjects\watchtower\watchtower\dist\static\projects\5c28af86-7550-11ec-a8d3-aea52421b16b\shots.json",
+        source_folder=r"C:\Users\Chris\Desktop\testfootage"
+        )
 
-    # # not needed, if a path is supplied, the constructor will load it automatically
-    # # edit.loadEdit(r"C:\01_Work\02_PersonalProjects\watchtower\watchtower\dist\static\projects\5c28af86-7550-11ec-a8d3-aea52421b16b\shots.json")
+    # not needed, if a path is supplied, the constructor will load it automatically
+    # edit.loadEdit(r"C:\01_Work\02_PersonalProjects\watchtower\watchtower\dist\static\projects\5c28af86-7550-11ec-a8d3-aea52421b16b\shots.json")
 
-    # print(edit)
+    print(edit)
+    edit.addAutoSlate()
+    exit()
 
     #custom edit
     clip1 = Clip(
