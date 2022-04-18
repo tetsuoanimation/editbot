@@ -482,6 +482,8 @@ class Edit:
             self.ready=False
 
     def addAutoSlate(self):
+        source_folder_format = self.source_folder if len(self.source_folder)<35 else Path(*Path(self.source_folder).parts[-5:])
+        shot_desc_path_format = self.shot_desc_path if len(self.shot_desc_path)<35 else Path(*Path(self.shot_desc_path).parts[-2:])
         slate=Slate(
             config=self.config,
             title=self.name,
