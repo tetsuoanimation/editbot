@@ -655,6 +655,7 @@ class Edit:
             "{ffmpeg_bin} -y -hide_banner -stats -loglevel error "
             "{input} "
             "-filter_complex \"{concatfilter}[0];[0]{sequencemaskfilter}\" "
+            "-movflags faststart "
             "{output_name}"
         ).format(
             ffmpeg_bin=ffmpeg_bin, 
