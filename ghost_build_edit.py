@@ -13,16 +13,27 @@ if __name__ == '__main__':
         fps=30
     )
 
-    edit = Edit(
+    animEdit = Edit(
         config=config,
         shot_desc_path=r"D:\AutomatedProjects\TechArt\TFPipeline\Code\watchtower_ftrack\watchtower\dist\static\projects\5c28af86-7550-11ec-a8d3-aea52421b16b\shots.json",
         source_folder=r"D:\AutomatedProjects\FallGuys\2106_Fallguys_Symphony\10_Output\00_Preview\02_Animation\02_Shots"
         )
 
-    edit.conformEdit(mode='in_frame')
-    edit.addAutoSlate()
-    edit.preconvertClips()
+    config.default_pass_name="Assembly"
+    assemblyEdit = Edit(        
+        config=config,
+        shot_desc_path=r"D:\AutomatedProjects\TechArt\TFPipeline\Code\watchtower_ftrack\watchtower\dist\static\projects\5c28af86-7550-11ec-a8d3-aea52421b16b\shots.json",
+        source_folder=r"D:\AutomatedProjects\FallGuys\2106_Fallguys_Symphony\10_Output\00_Preview\04_Assembly"
+        )
 
-    print(edit.build(r'd:\AutomatedProjects\FallGuys\2106_Fallguys_Symphony\10_Output\00_Preview\05_Edit\FG_Symphony_Animation_Edit.mp4'))
-    #print(edit.fastbuild(r'd:\AutomatedProjects\FallGuys\2106_Fallguys_Symphony\10_Output\00_Preview\05_Edit\FG_Symphony_Animation_Edit.mp4'))
-    edit.cleanup()
+    edits = [animEdit, assemblyEdit]
+
+    for edit in edits:
+
+        edit.conformEdit(mode='in_frame')
+        edit.addAutoSlate()
+        edit.preconvertClips()
+
+        print(edit.build(r'd:\AutomatedProjects\FallGuys\2106_Fallguys_Symphony\10_Output\00_Preview\05_Edit\FG_Symphony_{pipepass}_Edit.mp4'.format(pipepass=edit.config.default_pass_name)))
+        #print(edit.fastbuild(r'd:\AutomatedProjects\FallGuys\2106_Fallguys_Symphony\10_Output\00_Preview\05_Edit\FG_Symphony_Animation_Edit.mp4'))
+        edit.cleanup()
