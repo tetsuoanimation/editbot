@@ -1,4 +1,5 @@
-import os, json, datetime, subprocess, re, mimetypes, tempfile, shutil
+from __future__ import annotations
+import os, json, datetime, subprocess, re, mimetypes, tempfile, shutil, glob
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any, List
 from pathlib import Path
@@ -451,6 +452,54 @@ class Slate(Clip):
         self.check_ready()
 
 @dataclass
+class Location():
+    name: str
+    folder: str
+    priority: int=0
+    parent_path: str=''
+    location_type: str='local'
+    include_subfolders: Bool=False
+    sub_locations: List[Location]=field(init=False)
+
+    def __post_init__(self):
+        self.sub_locations=[]
+
+    @property
+    def path(self):
+        return os.path.join(self.parent_path, self.folder) if self.parent_path else self.folder
+
+    def addSublocation(self, location: Location):
+        location.parent_path=self.path
+        self.sub_locations.append(location)
+        self.sub_locations.sort(key=lambda i: i.priority, reverse=True)
+
+    def getFilesDict(self, glob_filter: str='*') ->Dict:
+        files = {}
+        files[self.name] = {}
+        files[self.name]['path'] = self.path
+        if not self.include_subfolders:
+            files[self.name]['files']=[f for f in glob.glob(r'{}\{}'.format(self.path,glob_filter)) if os.path.isfile(f)]
+        else:
+            files[self.name]['files']=[f for f in glob.glob(r'{}\*\{}'.format(self.path,glob_filter)) if os.path.isfile(f)]
+        if len(self.sub_locations)>0:
+            files[self.name]['sublocations']=[]
+            for sub_location in self.sub_locations:
+                files[self.name]['sublocations'].append(sub_location.getFilesDict(glob_filter=glob_filter))
+        return files
+    
+    def getFiles(self, glob_filter: str='*') ->List[str]:
+        files = []
+        if not self.include_subfolders:
+            files.extend(f for f in glob.glob(r'{}\{}'.format(self.path,glob_filter)) if os.path.isfile(f))
+        else:
+            files.extend(f for f in glob.glob(r'{}\*\{}'.format(self.path,glob_filter)) if os.path.isfile(f))
+        if len(self.sub_locations)>0:
+            for sub_location in self.sub_locations:
+                files.extend(sub_location.getFiles(glob_filter=glob_filter))
+        return files
+
+
+@dataclass
 class Edit:
     config: Config
     name: str=''
@@ -680,6 +729,17 @@ if __name__ == "__main__":
         clip_frame_handles=1,
         fps=30
     )
+
+    #build location
+    storageLocation = Location(name='root', folder=r"d:\AutomatedProjects\FallGuys\2106_Fallguys_Symphony\10_Output\00_Preview")
+    storageLocation.addSublocation(Location(name='Assembly', folder='04_Assembly', priority=5, include_subfolders=True))
+    storageLocation.addSublocation(Location(name='Animation', folder='02_Animation\\02_Shots', priority=3, include_subfolders=True))
+
+    print(storageLocation)
+    print(json.dumps(storageLocation.getFilesDict(glob_filter='*[!.txt]'), indent=4))
+    print(json.dumps(storageLocation.getFiles(glob_filter='*[!.txt]'), indent=4))
+
+    exit()
 
     # test edit from desc
     # edit = Edit(
