@@ -13,6 +13,12 @@ if __name__ == '__main__':
         fps=30
     )
 
+    # build location
+    storageLocation = Location(name='root', folder=r"d:\AutomatedProjects\FallGuys\2106_Fallguys_Symphony\10_Output\00_Preview")
+    # storageLocation = Location(name='root', folder=r'C:\Users\chris\Desktop\testfootage')
+    storageLocation.addSublocation(Location(name='Assembly', folder='04_Assembly', priority=5, subfolders_only=True))
+    storageLocation.addSublocation(Location(name='Animation', folder='02_Animation\\02_Shots', priority=3, subfolders_only=True))
+
     animEdit = Edit(
         config=config,
         shot_desc_path=r"D:\AutomatedProjects\TechArt\TFPipeline\Code\watchtower_ftrack\watchtower\dist\static\projects\5c28af86-7550-11ec-a8d3-aea52421b16b\shots.json",
@@ -26,10 +32,16 @@ if __name__ == '__main__':
         source_folder=r"D:\AutomatedProjects\FallGuys\2106_Fallguys_Symphony\10_Output\00_Preview\04_Assembly"
         )
 
-    edits = [animEdit, assemblyEdit]
+    config.default_pass_name="Latest"
+    latestEdit = Edit(
+        config=config,
+        shot_desc_path=r"D:\AutomatedProjects\TechArt\TFPipeline\Code\watchtower_ftrack\watchtower\dist\static\projects\5c28af86-7550-11ec-a8d3-aea52421b16b\shots.json",
+        source_folder=storageLocation
+        )
+
+    edits = [animEdit, assemblyEdit, latestEdit]
 
     for edit in edits:
-
         edit.conformEdit(mode='in_frame')
         edit.addAutoSlate()
         edit.preconvertClips()
