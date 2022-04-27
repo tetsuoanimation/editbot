@@ -1,7 +1,7 @@
 from __future__ import annotations
 import os, json, datetime, subprocess, re, mimetypes, tempfile, shutil, glob
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, overload
 from pathlib import Path
 
 @dataclass
@@ -12,6 +12,7 @@ class Config:
     clip_frame_handles: int
     name: str='Edit'
     default_pass_name: str='latest pass'
+    force_pass: bool=False #this forces the location to use the pass name
     enable_shotmask: bool=True
     clip_size: tuple=(1920,1080)
     fps: int=24
@@ -94,15 +95,17 @@ class Clip:
     clip_size: tuple=(1920,1080)
     pass_name: str=''
     name: str='S000'
-    _clip_path: str = field(init=False)
     shotmask: ShotMask = field(init=False)
     fps: int= field(init=False)
     is_converted: bool= field(init=False)
     is_missing_media: bool= field(init=False)
     converted_clip_path: str= field(init=False)
     ready: bool= field(init=False)
+    _clip_path: str = field(init=False)
 
     def __post_init__(self):
+        _clip_path: str = ''
+        _pass_name: str = ''
         if not self.pass_name:
             self.pass_name=self.config.default_pass_name
         self._clip_path: Path=Path()
@@ -129,7 +132,6 @@ class Clip:
         self.clip_size=self.config.clip_size
         self.check_ready()
     
-    # convert to @property
     @property
     def clip_path(self):
         return self._clip_path
@@ -149,6 +151,13 @@ class Clip:
         else:
             print('Cannot set file {}, file does not exist.'.format(footage_path))
     
+    def get_pass_name(self) -> str:
+        return self.pass_name
+    
+    def set_pass_name(self, pass_name: str):
+        self.shotmask.pass_name = pass_name
+        self.pass_name = pass_name
+
     def check_ready(self):
         if (self.clip_path.is_file()) and self.fps>0 and self.duration>0.0:
             self.ready=True
@@ -160,34 +169,60 @@ class Clip:
             self.is_converted=True
         else:
             self.is_converted=False
+    
+    @overload
+    def findFootage(self, footage_source: str, latest: bool=True, durationFromClip=False):
+        pass
+    @overload
+    def findFootage(self, footage_source: Location, durationFromClip=False, location_filter=''):
+        pass
 
-    def findFootage(self, footage_source_path: str, latest: bool=True, durationFromClip=False):
-        if latest:
-            # print('Searching Latest Clip footage for {} in {}'.format(self.name, footage_source_path))
-            searchpath = Path(footage_source_path)
-            videofiles_in_folder = [vf for vf in searchpath.rglob("*") if vf.is_file() and mimetypes.guess_type(vf)[0].startswith('video/')]
-            footageClips=[]
-            for file in videofiles_in_folder:
-                #print(os.path.basename(str(file)))  
-                if re.search("({})".format(self.name), os.path.basename(str(file)), flags=re.IGNORECASE):
-                    footageClips.append(file)
-            if len(footageClips)==0:
-                print('Cannot find footage for {}'.format(self.name))
-                self.check_ready()
-                return None
+    def findFootage(self, footage_source, latest=True, durationFromClip=False, location_filter=''):
+        if type(footage_source)==Location:
+            if location_filter=='':
+                latest_clip = footage_source.findLatestAllLocations(name=self.name, mime_type='video')
+                if latest_clip:
+                    self.set_pass_name(latest_clip['sublocation_name'])
+                    latest_clip=latest_clip['path']
+                    
+                else:
+                    return None
+            else:
+                latest_clip=footage_source.findLatestInLocation(name=self.name, mime_type='video', location_name=location_filter)
+                if latest_clip:
+                    self.set_pass_name(latest_clip['sublocation_name'])
+                    latest_clip=latest_clip['path']
+                else:
+                    return None
             
-            latest_clip = max(footageClips, key=lambda x: x.stat().st_mtime)
-
-            self.clip_path = latest_clip
-            if durationFromClip:
-                self.duration=self.getDuration()
-            self.check_ready()
-            self.is_missing_media=False
-            # print("Found {}".format(latest_clip))
-            return latest_clip
+        elif type(footage_source)==str:
+            if latest:
+                # print('Searching Latest Clip footage for {} in {}'.format(self.name, footage_source))
+                searchpath = Path(footage_source)
+                videofiles_in_folder = [vf for vf in searchpath.rglob("*") if vf.is_file() and mimetypes.guess_type(vf)[0].startswith('video/')]
+                footageClips=[]
+                for file in videofiles_in_folder:
+                    #print(os.path.basename(str(file)))  
+                    if re.search("({})".format(self.name), os.path.basename(str(file)), flags=re.IGNORECASE):
+                        footageClips.append(file)
+                if len(footageClips)==0:
+                    print('Cannot find footage for {}'.format(self.name))
+                    self.check_ready()
+                    return None
+                
+                latest_clip = max(footageClips, key=lambda x: x.stat().st_mtime)
+            else:
+                raise NotImplementedError('Only latest clip mode is implemented. Set latest=True for this function')
         else:
-            print('Only latest clip is currently implemented')
-            return None
+            raise NotImplementedError('Footage Source Type {} not implemented'.format(type(footage_source)))
+        
+        self.clip_path = latest_clip
+        if durationFromClip:
+            self.duration=self.getDuration()
+        self.check_ready()
+        self.is_missing_media=False
+        # print("Found {}".format(latest_clip))
+        return latest_clip
 
     def generateMissingMediaFilter(self):
         color='Red'
@@ -447,7 +482,7 @@ class Slate(Clip):
             notes=notes
             )
 
-    def findFootage(self, footage_source_path: str, latest: bool=True, durationFromClip=False):
+    def findFootage(self, footage_source: str, latest: bool=True, durationFromClip=False):
         print('Slates currently do not support footage')
         self.check_ready()
 
@@ -458,53 +493,102 @@ class Location():
     priority: int=0
     parent_path: str=''
     location_type: str='local'
-    include_subfolders: Bool=False
+    subfolders_only: Bool=False
     sub_locations: List[Location]=field(init=False)
 
     def __post_init__(self):
         self.sub_locations=[]
+
+    def __str__(self):
+        return self.folder
 
     @property
     def path(self):
         return os.path.join(self.parent_path, self.folder) if self.parent_path else self.folder
 
     def addSublocation(self, location: Location):
+        #sublocation are automatically sorted by priority
         location.parent_path=self.path
         self.sub_locations.append(location)
         self.sub_locations.sort(key=lambda i: i.priority, reverse=True)
 
-    def getFilesDict(self, glob_filter: str='*') ->Dict:
+    def getFilesDict(self, glob_filter: str='*', mime_type: str= '') ->Dict:
+        # files are always sorted by latest per sublocation
+        # sublocation are always sorted by priority
         files = {}
         files[self.name] = {}
         files[self.name]['path'] = self.path
-        if not self.include_subfolders:
-            files[self.name]['files']=[f for f in glob.glob(r'{}\{}'.format(self.path,glob_filter)) if os.path.isfile(f)]
+        if not self.subfolders_only:
+            file_list = [Path(f) for f in glob.glob(r'{}\{}'.format(self.path,glob_filter)) if os.path.isfile(f)]
+            if mime_type:
+                file_list = [vf for vf in file_list if mimetypes.guess_type(vf)[0].startswith('{}/'.format(mime_type))]
+            files[self.name]['files'] = sorted(file_list, key= lambda x: x.stat().st_mtime)
         else:
-            files[self.name]['files']=[f for f in glob.glob(r'{}\*\{}'.format(self.path,glob_filter)) if os.path.isfile(f)]
+            file_list = [Path(f) for f in glob.glob(r'{}\*\{}'.format(self.path,glob_filter)) if os.path.isfile(f)]
+            if mime_type:
+                file_list = [vf for vf in file_list if mimetypes.guess_type(vf)[0].startswith('{}/'.format(mime_type))]
+            files[self.name]['files'] = sorted(file_list, key= lambda x: x.stat().st_mtime)
         if len(self.sub_locations)>0:
             files[self.name]['sublocations']=[]
             for sub_location in self.sub_locations:
-                files[self.name]['sublocations'].append(sub_location.getFilesDict(glob_filter=glob_filter))
+                files[self.name]['sublocations'].append(sub_location.getFilesDict(glob_filter=glob_filter, mime_type=mime_type))
         return files
     
-    def getFiles(self, glob_filter: str='*') ->List[str]:
+    def getFiles(self, glob_filter: str='*', mime_type: str= '', include_sublocations=True) ->List[Path]:
+        # files are always sorted by priority first and latest second
         files = []
-        if not self.include_subfolders:
-            files.extend(f for f in glob.glob(r'{}\{}'.format(self.path,glob_filter)) if os.path.isfile(f))
+        if not self.subfolders_only:
+            files.extend(sorted([Path(f) for f in glob.glob(r'{}\{}'.format(self.path,glob_filter)) if os.path.isfile(f)], key=lambda x: x.stat().st_mtime))
         else:
-            files.extend(f for f in glob.glob(r'{}\*\{}'.format(self.path,glob_filter)) if os.path.isfile(f))
-        if len(self.sub_locations)>0:
+            files.extend(sorted([Path(f) for f in glob.glob(r'{}\*\{}'.format(self.path,glob_filter)) if os.path.isfile(f)], key=lambda x: x.stat().st_mtime))
+        if len(self.sub_locations)>0 and include_sublocations:
             for sub_location in self.sub_locations:
-                files.extend(sub_location.getFiles(glob_filter=glob_filter))
+                files.extend(sub_location.getFiles(glob_filter=glob_filter, mime_type=mime_type))
+        if mime_type:
+            files = [vf for vf in files if mimetypes.guess_type(vf)[0].startswith('{}/'.format(mime_type))]
         return files
 
+    @overload
+    def findLatestInLocation(self, name: str, glob_filter: str='*', mime_type: str= '') ->List:
+        pass
+    @overload
+    def findLatestInLocation(self, name: str, glob_filter: str='*', mime_type: str= '', location_name='') ->Dict:
+        pass
+
+    def findLatestInLocation(self, name: str, glob_filter: str='*', mime_type: str= '', location_name=''):
+        files = []
+        if len(self.sub_locations)>0:
+            for sublocation in self.sub_locations:
+                files.extend(sublocation.findLatestInLocation(name, glob_filter, mime_type))
+        found_files = []
+        for file in self.getFiles(glob_filter, mime_type, include_sublocations=False):
+            if re.search("({})".format(name), str(file), flags=re.IGNORECASE):
+                found_files.extend(file if type(file)==List else [file])
+        if found_files: 
+            latest_file = max(found_files, key=lambda x: x.stat().st_mtime)
+            found_file={
+                'name': name,
+                'path': latest_file,
+                'sublocation_name': self.name,
+                'priority': self.priority
+            }
+            files.append(found_file)
+        if location_name:
+            latest_clips_in_loc=[ff for ff in files if ff['sublocation_name']==location_name]
+            return (latest_clips_in_loc[0] if len(latest_clips_in_loc)>0 else None)
+        
+        return sorted(files, key= lambda x: x['priority'], reverse=True)
+    
+    def findLatestAllLocations(self, name: str, glob_filter: str='*', mime_type: str= '') ->Dict:
+        latestInLocation = self.findLatestInLocation(name, glob_filter, mime_type)
+        return latestInLocation[0] if len(latestInLocation)>0 else None
 
 @dataclass
 class Edit:
     config: Config
     name: str=''
     shot_desc_path: str=''
-    source_folder: str=''
+    source_folder: Union(str, Location)=''
     frameoffset: int= 0
     fps: int=None
     edit: list[Clip]= field(init=False)
@@ -531,7 +615,7 @@ class Edit:
             self.ready=False
 
     def addAutoSlate(self):
-        source_folder_format = self.source_folder if len(self.source_folder)<35 else Path(*Path(self.source_folder).parts[-5:])
+        source_folder_format = self.source_folder if len(str(self.source_folder))<35 else Path(*Path(str(self.source_folder)).parts[-5:])
         shot_desc_path_format = self.shot_desc_path if len(self.shot_desc_path)<35 else Path(*Path(self.shot_desc_path).parts[-2:])
         slate=Slate(
             config=self.config,
@@ -577,11 +661,14 @@ class Edit:
         self.frameoffset=min([clip.in_frame for clip in self.edit])
         return self.edit
     
-    def findFootage(self, source_folder: str=None, latest=True, keepClipLengths=False):
+    def findFootage(self, source_folder: Union(str,Location)=None, latest=True, keepClipLengths=False):
         if source_folder==None:
             source_folder=self.source_folder
         for clip in self.edit:
-            clip.findFootage(source_folder, latest=latest, durationFromClip=keepClipLengths)
+            if type(source_folder)==Location and self.config.force_pass:
+                clip.findFootage(source_folder, location_filter=self.config.default_pass_name)
+            else:
+                clip.findFootage(source_folder, latest=latest, durationFromClip=keepClipLengths)
         self.check_ready()
 
     def preconvertClips(self, tempfolder: str='') ->str:
@@ -719,27 +806,44 @@ class Edit:
 
 if __name__ == "__main__":
 
-    config = Config(
+    anim_config = Config(
         ffmpeg_bin=r'C:\ffmpeg\bin\ffmpeg', 
         ffprobe_bin=r'C:\ffmpeg\bin\ffprobe',
         name='Test Edit',
-        default_pass_name='Latest Pass',
+        default_pass_name='Animation', 
+        force_pass=True, #forces to use clips from #pass# location ( Animation )
         enable_shotmask=True,
         shot_mask_logo_path=r'C:\01_Work\02_PersonalProjects\editbot\res\tetsuo_favicon.png' , 
         clip_frame_handles=1,
         fps=30
     )
 
+    latest_config = Config(
+        ffmpeg_bin=r'C:\ffmpeg\bin\ffmpeg', 
+        ffprobe_bin=r'C:\ffmpeg\bin\ffprobe',
+        name='Test Edit',
+        default_pass_name='Latest Pass', 
+        force_pass=False, #uses latest location pass and sets name to it
+        enable_shotmask=True,
+        shot_mask_logo_path=r'C:\01_Work\02_PersonalProjects\editbot\res\tetsuo_favicon.png' , 
+        clip_frame_handles=1,
+        fps=30
+    )
+
+    # set config for this build
+    running_config=latest_config
+
     #build location
-    storageLocation = Location(name='root', folder=r"d:\AutomatedProjects\FallGuys\2106_Fallguys_Symphony\10_Output\00_Preview")
-    storageLocation.addSublocation(Location(name='Assembly', folder='04_Assembly', priority=5, include_subfolders=True))
-    storageLocation.addSublocation(Location(name='Animation', folder='02_Animation\\02_Shots', priority=3, include_subfolders=True))
+    # storageLocation = Location(name='root', folder=r"d:\AutomatedProjects\FallGuys\2106_Fallguys_Symphony\10_Output\00_Preview")
+    storageLocation = Location(name='root', folder=r'C:\Users\chris\Desktop\testfootage')
+    storageLocation.addSublocation(Location(name='Assembly', folder='04_Assembly', priority=5, subfolders_only=True))
+    storageLocation.addSublocation(Location(name='Animation', folder='02_Animation\\02_Shots', priority=3, subfolders_only=True))
 
-    print(storageLocation)
-    print(json.dumps(storageLocation.getFilesDict(glob_filter='*[!.txt]'), indent=4))
-    print(json.dumps(storageLocation.getFiles(glob_filter='*[!.txt]'), indent=4))
-
-    exit()
+    # print(storageLocation)
+    # # print(json.dumps(storageLocation.getFilesDict(mime_type='video'), indent=4, default=str))
+    # # print(json.dumps(storageLocation.getFiles(mime_type='video'), indent=4, default=str))
+    # print(json.dumps(storageLocation.findLatestInLocation(name='S010', mime_type='video', location_name='Animation'), indent=4, default=str))
+    # print(json.dumps(storageLocation.findLatestAllLocations(name='S010', mime_type='video'), indent=4, default=str))
 
     # test edit from desc
     # edit = Edit(
@@ -753,7 +857,7 @@ if __name__ == "__main__":
 
     #custom edit
     clip1 = Clip(
-        config=config,
+        config=running_config,
         name = 'S010-020',
         # frame_handles_in=5,
         in_frame = 60,
@@ -762,7 +866,7 @@ if __name__ == "__main__":
     )
 
     clip2 = Clip(
-        config=config,
+        config=running_config,
         name = 'S030-040',
         #frame_handles_in=5,
         in_frame = 20,
@@ -771,7 +875,7 @@ if __name__ == "__main__":
     )
 
     missing = Clip(
-        config=config,
+        config=running_config,
         name = 'S070',
         in_frame = 80,
         duration= 4,
@@ -779,7 +883,7 @@ if __name__ == "__main__":
     )
 
     slate1 = Slate(
-        config=config,
+        config=running_config,
         title='Testedit',
         notes=[
             'an edit for testing',
@@ -792,7 +896,7 @@ if __name__ == "__main__":
         pass_name='Animation'
     )
 
-    edit_custom = Edit(config=config)
+    edit_custom = Edit(config=running_config)
     # sequential = True means the edit won't care about the in_frame and just append the clip to the edit
     # edit_custom.addClip(clip1, sequential=True)
     # edit_custom.addClip(clip2, sequential=True)
@@ -802,7 +906,10 @@ if __name__ == "__main__":
     edit_custom.addClip(clip1, sequential=False)
     edit_custom.addClip(clip2, sequential=False)
     # this uses the definition in the clip object if it has not been overwritten
-    edit_custom.findFootage(r'C:\Users\chris\Desktop\testfootage', latest=True)
+    # simple mode - set folder
+    # edit_custom.findFootage(r'C:\Users\chris\Desktop\testfootage\nofolders', latest=True)
+    # storage location mode - needs configures storage location
+    edit_custom.findFootage(storageLocation)
     # keepClipLengths=True overwrites duration and in_frames to use the full source clip lengths ( minus handles )
     # edit_custom.findFootage(r'C:\Users\chris\Desktop\testfootage', latest=True, keepClipLengths=True)
     # conforms edit to the duration set in the clip objects
