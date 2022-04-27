@@ -661,12 +661,17 @@ class Edit:
         self.frameoffset=min([clip.in_frame for clip in self.edit])
         return self.edit
     
-    def findFootage(self, source_folder: Union(str,Location)=None, latest=True, keepClipLengths=False):
+    def findFootage(self, source_folder: Union(str,Location)=None, latest=True, keepClipLengths=False, location_filter=''):
         if source_folder==None:
             source_folder=self.source_folder
         for clip in self.edit:
-            if type(source_folder)==Location and self.config.force_pass:
-                clip.findFootage(source_folder, location_filter=self.config.default_pass_name)
+            if type(source_folder)==Location:
+                if location_filter:
+                    clip.findFootage(source_folder, durationFromClip=keepClipLengths, location_filter=location_filter)
+                elif self.config.force_pass:
+                    clip.findFootage(source_folder, durationFromClip=keepClipLengths, location_filter=self.config.default_pass_name)
+                else:
+                    clip.findFootage(source_folder, durationFromClip=keepClipLengths )
             else:
                 clip.findFootage(source_folder, latest=latest, durationFromClip=keepClipLengths)
         self.check_ready()
@@ -908,8 +913,10 @@ if __name__ == "__main__":
     # this uses the definition in the clip object if it has not been overwritten
     # simple mode - set folder
     # edit_custom.findFootage(r'C:\Users\chris\Desktop\testfootage\nofolders', latest=True)
-    # storage location mode - needs configures storage location
+    # storage location mode - needs configures storage location ( would use config defaults )
     edit_custom.findFootage(storageLocation)
+    # filter for specific pass on find footage step ( this is an override for the config! )
+    # edit_custom.findFootage(storageLocation, location_filter='Assembly')
     # keepClipLengths=True overwrites duration and in_frames to use the full source clip lengths ( minus handles )
     # edit_custom.findFootage(r'C:\Users\chris\Desktop\testfootage', latest=True, keepClipLengths=True)
     # conforms edit to the duration set in the clip objects
