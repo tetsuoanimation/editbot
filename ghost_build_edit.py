@@ -2,7 +2,7 @@ from editbot_main import *
 
 if __name__ == '__main__':
 
-    config = Config(
+    base_config = Config(
         name="Fallguys Season Symphony",
         default_pass_name="Animation",
         ffmpeg_bin=r"C:\Program Files\ffmpeg\bin\ffmpeg", 
@@ -19,22 +19,25 @@ if __name__ == '__main__':
     storageLocation.addSublocation(Location(name='Assembly', folder='04_Assembly', priority=5, subfolders_only=True))
     storageLocation.addSublocation(Location(name='Animation', folder='02_Animation\\02_Shots', priority=3, subfolders_only=True))
 
+    anim_config = base_config
     animEdit = Edit(
-        config=config,
+        config=anim_config,
         shot_desc_path=r"D:\AutomatedProjects\TechArt\TFPipeline\Code\watchtower_ftrack\watchtower\dist\static\projects\5c28af86-7550-11ec-a8d3-aea52421b16b\shots.json",
         source_folder=r"D:\AutomatedProjects\FallGuys\2106_Fallguys_Symphony\10_Output\00_Preview\02_Animation\02_Shots"
         )
 
-    config.default_pass_name="Assembly"
+    assembly_config = base_config
+    assembly_config.default_pass_name="Assembly"
     assemblyEdit = Edit(        
-        config=config,
+        config=assembly_config,
         shot_desc_path=r"D:\AutomatedProjects\TechArt\TFPipeline\Code\watchtower_ftrack\watchtower\dist\static\projects\5c28af86-7550-11ec-a8d3-aea52421b16b\shots.json",
         source_folder=r"D:\AutomatedProjects\FallGuys\2106_Fallguys_Symphony\10_Output\00_Preview\04_Assembly"
         )
 
-    config.default_pass_name="Latest"
+    latest_config = base_config
+    latest_config.default_pass_name="Latest"
     latestEdit = Edit(
-        config=config,
+        config=latest_config,
         shot_desc_path=r"D:\AutomatedProjects\TechArt\TFPipeline\Code\watchtower_ftrack\watchtower\dist\static\projects\5c28af86-7550-11ec-a8d3-aea52421b16b\shots.json",
         source_folder=storageLocation
         )
