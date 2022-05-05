@@ -1,4 +1,5 @@
 from editbot_main import *
+import copy
 
 if __name__ == '__main__':
 
@@ -19,14 +20,14 @@ if __name__ == '__main__':
     storageLocation.addSublocation(Location(name='Assembly', folder='04_Assembly', priority=5, subfolders_only=True))
     storageLocation.addSublocation(Location(name='Animation', folder='02_Animation\\02_Shots', priority=3, subfolders_only=True))
 
-    anim_config = base_config
-    animEdit = Edit(
+    anim_config = copy.deepcopy(base_config)
+    animEdit = Edit()
         config=anim_config,
         shot_desc_path=r"D:\AutomatedProjects\TechArt\TFPipeline\Code\watchtower_ftrack\watchtower\dist\static\projects\5c28af86-7550-11ec-a8d3-aea52421b16b\shots.json",
         source_folder=r"D:\AutomatedProjects\FallGuys\2106_Fallguys_Symphony\10_Output\00_Preview\02_Animation\02_Shots"
         )
 
-    assembly_config = base_config
+    assembly_config = copy.deepcopy(base_config)
     assembly_config.default_pass_name="Assembly"
     assemblyEdit = Edit(        
         config=assembly_config,
@@ -34,7 +35,7 @@ if __name__ == '__main__':
         source_folder=r"D:\AutomatedProjects\FallGuys\2106_Fallguys_Symphony\10_Output\00_Preview\04_Assembly"
         )
 
-    latest_config = base_config
+    latest_config = copy.deepcopy(base_config)
     latest_config.default_pass_name="Latest"
     latestEdit = Edit(
         config=latest_config,
