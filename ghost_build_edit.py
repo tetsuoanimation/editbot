@@ -17,8 +17,13 @@ if __name__ == '__main__':
     # build location
     storageLocation = Location(name='root', folder=r"d:\AutomatedProjects\FallGuys\2106_Fallguys_Symphony\10_Output\00_Preview")
     # storageLocation = Location(name='root', folder=r'C:\Users\chris\Desktop\testfootage')
+    storageLocation.addSublocation(Location(name='Compositing', folder='09_Comp', priority=7))
+    storageLocation.addSublocation(Location(name='Compositing', folder='09_Comp', priority=7, subfolders_only=True))
+    storageLocation.addSublocation(Location(name='Rendering', folder='06_Setup\\03_Rendering', priority=6))
+    storageLocation.addSublocation(Location(name='Rendering', folder='06_Setup\\03_Rendering', priority=6, subfolders_only=True))
     storageLocation.addSublocation(Location(name='Assembly', folder='04_Assembly', priority=5, subfolders_only=True))
     storageLocation.addSublocation(Location(name='Animation', folder='02_Animation\\02_Shots', priority=3, subfolders_only=True))
+    
 
     anim_config = copy.deepcopy(base_config)
     animEdit = Edit(
