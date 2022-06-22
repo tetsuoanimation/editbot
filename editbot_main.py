@@ -1,5 +1,5 @@
 from __future__ import annotations
-import os, json, datetime, subprocess, re, mimetypes, tempfile, shutil, glob
+import os, json, datetime, subprocess, re, mimetypes, tempfile, shutil, glob, sys
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any, List, overload
 from pathlib import Path
@@ -329,14 +329,19 @@ class Clip:
             ffprobe_bin=self.config.ffprobe_bin
         if not os.path.exists(self.clip_path):
             sys.stderr.write("ERROR: filename %r was not found!" % (self.clip_path,))
-            return -1         
-        out = subprocess.check_output([ffprobe_bin,self.clip_path,"-v","0","-select_streams","v","-print_format","flat","-show_entries","stream=r_frame_rate"], text=True)
-        rate = out.split('=')[1].strip()[1:-1].split('/')
-        if len(rate)==1:
-            return float(rate[0])
-        if len(rate)==2:
-            return float(rate[0])/float(rate[1])
-        return -1
+            return -1
+        try:         
+            out = subprocess.check_output([ffprobe_bin,self.clip_path,"-v","0","-select_streams","v","-print_format","flat","-show_entries","stream=r_frame_rate"], text=True)
+            rate = out.split('=')[1].strip()[1:-1].split('/')
+            if len(rate)==1:
+                return float(rate[0])
+            if len(rate)==2:
+                return float(rate[0])/float(rate[1])
+            return -1
+        # when no clip does exist, it can't be checked for its fps and we need to use the base
+        except TypeError as e:
+            print("Error when getting frame rate, using base fps\n{}".format(e))
+            return self.fps
 
     def getDuration(self, ffprobe_bin:str=''):
         if not ffprobe_bin:
@@ -824,13 +829,13 @@ if __name__ == "__main__":
     )
 
     latest_config = Config(
-        ffmpeg_bin=r'C:\ffmpeg\bin\ffmpeg', 
-        ffprobe_bin=r'C:\ffmpeg\bin\ffprobe',
+        ffmpeg_bin=r'C:\Program Files\ffmpeg\bin\ffmpeg', 
+        ffprobe_bin=r'C:\Program Files\ffmpeg\bin\ffprobe',
         name='Test Edit',
         default_pass_name='Latest Pass', 
         force_pass=False, #uses latest location pass and sets name to it
         enable_shotmask=True,
-        shot_mask_logo_path=r'C:\01_Work\02_PersonalProjects\editbot\res\tetsuo_favicon.png' , 
+        shot_mask_logo_path=r'D:\01_Work\01_Software\EditBot\res\tetsuo_favicon.png' , 
         clip_frame_handles=1,
         fps=30
     )
