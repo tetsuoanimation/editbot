@@ -1,0 +1,12 @@
+[
+    {
+        "name": "S010",
+        "startFrame": 100,
+        "durationSeconds": 10.00000000000000
+    },
+    {
+        "name": "S020",
+        "startFrame": 400,
+        "durationSeconds": 7.033333333333333
+    }
+]
