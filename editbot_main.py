@@ -17,6 +17,10 @@ class Config:
     clip_size: tuple=(1920,1080)
     fps: int=24
 
+    def __post_init__(self):
+        assert os.path.isfile(self.ffmpeg_bin), "{} does not exist, ffmpeg is unavailable".format(self.ffmpeg_bin)
+        assert os.path.isfile(self.ffprobe_bin), "{} does not exist, ffprobe is unavailable".format(self.ffprobe_bin)
+        
 @dataclass
 class ShotMask:
     mode: str
@@ -174,9 +178,9 @@ class Clip:
     def findFootage(self, footage_source: str, latest: bool=True, durationFromClip=False):
         pass
     @overload
-    def findFootage(self, footage_source: Location, durationFromClip=False, location_filter=''):
+    def findFootage(self, footage_source: Location, latest: bool=True, durationFromClip=False, location_filter=''):
         pass
-
+    
     def findFootage(self, footage_source, latest=True, durationFromClip=False, location_filter=''):
         if type(footage_source)==Location:
             if location_filter=='':
@@ -330,7 +334,7 @@ class Clip:
         if not os.path.exists(self.clip_path):
             sys.stderr.write("ERROR: filename %r was not found!" % (self.clip_path,))
             return -1
-        try:         
+        try:
             out = subprocess.check_output([ffprobe_bin,self.clip_path,"-v","0","-select_streams","v","-print_format","flat","-show_entries","stream=r_frame_rate"], text=True)
             rate = out.split('=')[1].strip()[1:-1].split('/')
             if len(rate)==1:
@@ -487,8 +491,8 @@ class Slate(Clip):
             notes=notes
             )
 
-    def findFootage(self, footage_source: str, latest: bool=True, durationFromClip=False):
-        print('Slates currently do not support footage')
+    def findFootage(self, footage_source: str, latest: bool=True, durationFromClip=False, location_filter=''):
+        pass # print('Slates currently do not support footage')
         self.check_ready()
 
 @dataclass
@@ -505,7 +509,7 @@ class Location():
         self.sub_locations=[]
 
     def __str__(self):
-        return self.folder
+        return '<editbot_main.Location>{}'.format(self.folder)
 
     @property
     def path(self):
@@ -672,11 +676,11 @@ class Edit:
         for clip in self.edit:
             if type(source_folder)==Location:
                 if location_filter:
-                    clip.findFootage(source_folder, durationFromClip=keepClipLengths, location_filter=location_filter)
+                    clip.findFootage(source_folder, latest=latest, durationFromClip=keepClipLengths, location_filter=location_filter)
                 elif self.config.force_pass:
-                    clip.findFootage(source_folder, durationFromClip=keepClipLengths, location_filter=self.config.default_pass_name)
+                    clip.findFootage(source_folder, latest=latest, durationFromClip=keepClipLengths, location_filter=self.config.default_pass_name)
                 else:
-                    clip.findFootage(source_folder, durationFromClip=keepClipLengths )
+                    clip.findFootage(source_folder, latest=latest, durationFromClip=keepClipLengths )
             else:
                 clip.findFootage(source_folder, latest=latest, durationFromClip=keepClipLengths)
         self.check_ready()
@@ -817,8 +821,8 @@ class Edit:
 if __name__ == "__main__":
 
     anim_config = Config(
-        ffmpeg_bin=r'C:\ffmpeg\bin\ffmpeg', 
-        ffprobe_bin=r'C:\ffmpeg\bin\ffprobe',
+        ffmpeg_bin=r'C:\ffmpeg\bin\ffmpeg.exe', 
+        ffprobe_bin=r'C:\ffmpeg\bin\ffprobe.exe',
         name='Test Edit',
         default_pass_name='Animation', 
         force_pass=True, #forces to use clips from #pass# location ( Animation )
@@ -829,13 +833,13 @@ if __name__ == "__main__":
     )
 
     latest_config = Config(
-        ffmpeg_bin=r'C:\Program Files\ffmpeg\bin\ffmpeg', 
-        ffprobe_bin=r'C:\Program Files\ffmpeg\bin\ffprobe',
+        ffmpeg_bin=r'C:\Program Files\ffmpeg\bin\ffmpeg.exe', 
+        ffprobe_bin=r'C:\Program Files\ffmpeg\bin\ffprobe.exe',
         name='Test Edit',
         default_pass_name='Latest Pass', 
         force_pass=False, #uses latest location pass and sets name to it
         enable_shotmask=True,
-        shot_mask_logo_path=r'D:\01_Work\01_Software\EditBot\res\tetsuo_favicon.png' , 
+        shot_mask_logo_path=r'C:\01_Work\02_PersonalProjects\editbot\res\tetsuo_favicon.png' , 
         clip_frame_handles=1,
         fps=30
     )
@@ -934,7 +938,22 @@ if __name__ == "__main__":
     print(edit_custom.fastbuild(r'C:\Users\chris\Desktop\ffmpegFastBuildTest.mp4'))
     print(edit_custom.build(r'C:\Users\chris\Desktop\ffmpegSlowBuildTest.mp4'))
 
+    # use a custom slate
+    edit_slate = Edit(config=anim_config)
+    edit_slate.addClip(slate1, sequential=True)
+    edit_slate.addClip(missing, sequential=True)
+    edit_slate.addClip(clip1, sequential=True)
+    edit_slate.addClip(clip2, sequential=True)
+    edit_slate.findFootage(storageLocation)
+    edit_slate.conformEdit(mode='in_frame')
+    edit_slate.preconvertClips()
+
+    print(edit_slate.fastbuild(r'C:\Users\chris\Desktop\ffmpegFastBuildTestCustomSlate.mp4'))
+    print(edit_slate.build(r'C:\Users\chris\Desktop\ffmpegSlowBuildTestCustomSlate.mp4'))
+
+    # remove all temp folders
     edit_custom.cleanup()
+    edit_slate.cleanup()
 
     # for clip in edit_custom.edit:
     #     print(clip)
