@@ -335,7 +335,7 @@ class Clip:
             sys.stderr.write("ERROR: filename %r was not found!" % (self.clip_path,))
             return -1
         try:
-            out = subprocess.check_output([ffprobe_bin,self.clip_path,"-v","0","-select_streams","v","-print_format","flat","-show_entries","stream=r_frame_rate"], text=True)
+            out = subprocess.check_output([ffprobe_bin,str(self.clip_path),"-v","0","-select_streams","v","-print_format","flat","-show_entries","stream=r_frame_rate"], text=True)
             rate = out.split('=')[1].strip()[1:-1].split('/')
             if len(rate)==1:
                 return float(rate[0])
@@ -353,7 +353,7 @@ class Clip:
         if not os.path.exists(self.clip_path):
             sys.stderr.write("ERROR: filename %r was not found!" % (self.clip_path,))
             return -1   
-        out = subprocess.check_output([ffprobe_bin,self.clip_path,"-v", "error","-select_streams","v","-print_format","flat","-show_entries","stream=duration"],text=True)
+        out = subprocess.check_output([ffprobe_bin,str(self.clip_path),"-v", "error","-select_streams","v","-print_format","flat","-show_entries","stream=duration"],text=True)
         duration = float(out.split('=')[1].strip()[1:-1])
         handle_duration= (self.frame_handles_in*2)/self.fps
         duration -= handle_duration
