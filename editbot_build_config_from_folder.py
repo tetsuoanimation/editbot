@@ -29,7 +29,7 @@ def get_video_fps(clip_path):
         return float(rate[0])/float(rate[1])
     return -1
 
-def create_config_from_folder(edit_desc_path, edit_desc_name, foldername):
+def create_config_from_folder(edit_desc_path, edit_desc_name, foldername, alphabetical_sort=True):
 
     videos = list_video_files_in_folder(foldername)
     video_dict = []
@@ -47,6 +47,9 @@ def create_config_from_folder(edit_desc_path, edit_desc_name, foldername):
         }
 
         video_dict.append(clip_dict)
+    
+    if alphabetical_sort:
+        video_dict_sorted = sorted(video_dict, key=lambda x: [x["name"]])
 
     json_str=(json.dumps(video_dict, indent=4))
 
