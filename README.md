@@ -14,16 +14,17 @@ config = editbot_build_config_from_folder.create_config_from_folder(
 Once you have the config file, you can run the `build_edit_from_json` scripts function:
 ```
 result = build_edit_from_json.build_edit( 
-    edit_desc_path="path/to/desc/temp/folder",
-    folder = "path/to/folder/with/videoclips",
-    edit_desc_name="edit_desc_name.json", 
-    edit_output_path="edit/video/output/path", 
-    edit_output_name="edit_video_output_name,
-    name = 'Folder Edit', # shown on slate
-    pass_name = 'Folder Preview', # shown on slate and in shotmask header
-    logo_path=os.path.join("path/to/company/logo.png),
-    fps=30
-    )
+                                edit_desc_path="path/to/desc/temp/folder",
+                                folder = "path/to/folder/with/videoclips",
+                                subfolders = False                          # footage is located in subfolders
+                                edit_desc_name="edit_desc_name.json", 
+                                edit_output_path="edit/video/output/path", 
+                                edit_output_name="edit_video_output_name,
+                                name = 'Folder Edit',                       # shown on slate
+                                pass_name = 'Folder Preview',               # shown on slate and in shotmask header
+                                logo_path=os.path.join("path/to/company/logo.png),
+                                fps=30
+                                )
 ```
 
 You can also supply your own desc files, check `minimal_edit.json` for the structure.

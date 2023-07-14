@@ -6,14 +6,15 @@ ffprobe_bin=r"C:\Program Files\ffmpeg\bin\ffprobe.exe"
 
 def build_edit(
     name, 
-    folder, 
+    folder,
     pass_name, 
     edit_desc_path, 
     edit_desc_name, 
     edit_output_path, 
     edit_output_name,
     logo_path,
-    fps
+    fps,
+    subfolders = False
     ):
 
     base_config = Config(
@@ -29,7 +30,7 @@ def build_edit(
 
     # build location
     storageLocation = Location(name='root', folder=folder)
-    storageLocation.addSublocation(Location(name=pass_name, folder=folder, priority=7))
+    storageLocation.addSublocation(Location(name=pass_name, folder=folder, priority=7, subfolders_only=subfolders))
 
     anim_config = copy.deepcopy(base_config)
     anim_config.force_pass = True,
