@@ -363,7 +363,7 @@ class Clip:
 class Slate(Clip):
     # config: Config
     in_frame: int=0
-    # duration: float=5
+    duration: float=5
     # clip_size: tuple=(1920,1080)
     title: str="Slate"
     notes: List[str]=List
@@ -387,10 +387,10 @@ class Slate(Clip):
         self.check_ready()
 
     def check_ready(self):
-        if self.fps>0 and self.duration>0.0 and self.title:
-            self.ready=True
+        if self.title and self.duration>0:
+            self.ready = True
         else:
-            self.ready=False
+            self.ready = False
     
     def convertClip(self, output_path:str, ffmpeg_bin:str='', out_fps: Any=None) ->bool: 
         if not ffmpeg_bin:
@@ -424,6 +424,7 @@ class Slate(Clip):
         
         self.converted_clip_path=Path(output_path)
         self.check_converted()
+        print(f"Generated Slate at {output_path}")
         return True
 
     def generateFilterString(self):
@@ -623,9 +624,10 @@ class Edit:
         else:
             self.ready=False
 
-    def addAutoSlate(self):
+    def addAutoSlate(self, duration=2):
         source_folder_format = self.source_folder if len(str(self.source_folder))<35 else Path(*Path(str(self.source_folder)).parts[-5:])
         shot_desc_path_format = self.shot_desc_path if len(self.shot_desc_path)<35 else Path(*Path(self.shot_desc_path).parts[-2:])
+        print(f"Building autoslate:\n\t{source_folder_format}\n\t{shot_desc_path_format}")
         slate=Slate(
             config=self.config,
             title=self.name,
@@ -636,18 +638,21 @@ class Edit:
                 "Source: {}".format(str(shot_desc_path_format).replace('\\', '\\\\\\\\')),
                 "Footage Source: {}".format(str(source_folder_format).replace('\\', '\\\\\\\\'))
             ],
-            duration=self.frameoffset/self.fps,
+            duration=duration,
             pass_name=self.config.default_pass_name
         )
-        self.addClip(slate, sequential=False)
+        self.addClip(slate, sequential=False, index=0)
 
-    def addClip(self, clip: Clip, sequential: bool=True):
-        if sequential:
-            clip_offset = sum([c.duration*c.fps for c in self.edit])
-            clip.in_frame = clip_offset
-        self.edit.append(clip)
-        self.frameoffset = min([c.in_frame for c in self.edit])
-        self.edit.sort(key=lambda d: d.in_frame)
+    def addClip(self, clip: Clip, sequential: bool=True, index=None):
+        if index is not None:
+            self.edit.insert(index, clip)
+        else:
+            if sequential:
+                clip_offset = sum([c.duration*c.fps for c in self.edit])
+                clip.in_frame = clip_offset
+            self.edit.append(clip)
+            self.frameoffset = min([c.in_frame for c in self.edit])
+            self.edit.sort(key=lambda d: d.in_frame)
         self.check_ready()
 
     def loadEdit(self, shot_desc_path: str, resetEdit=True) ->list[Clip]:
