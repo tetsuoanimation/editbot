@@ -428,7 +428,7 @@ class Slate(Clip):
         return True
 
     def generateFilterString(self):
-        color='DarkSlateGray'
+        color='Black'
         grid_ratio=self.clip_size[1]/5
         
         fontsize_title = self.clip_size[1]/15

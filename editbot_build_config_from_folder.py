@@ -63,9 +63,10 @@ def create_config_from_folder(edit_desc_path, edit_desc_name, foldername, alphab
 
 if __name__ == "__main__":
 
-    edit_desc_path = r"C:"
-    edit_desc_name = r"editbot_testconfig.json"
-    foldername = r"C:\Users\chris\Desktop\testfootage\02_Animation"
+    edit_desc_path = r"E:\01_Work\03_Kunden\tetsuoanimation\00_mainDepot\FallGuys\20230814_Fallguys_EOY\10_Output\00_Preview\01_Layout"
+    edit_desc_name = r"SQ01_editconfig.json"
+    foldername = r"E:\01_Work\03_Kunden\tetsuoanimation\00_mainDepot\FallGuys\20230814_Fallguys_EOY\10_Output\00_Preview\01_Layout"
     
     result = create_config_from_folder(edit_desc_path, edit_desc_name, foldername)
     print (json.dumps(result, indent=4))
+
