@@ -27,6 +27,8 @@ result = build_edit_from_json.build_edit(
                                 )
 ```
 
+You can find these two functions combined in the example in `build_folder_edit.py` 
+
 You can also supply your own desc files, check `minimal_edit.json` for the structure.
 
 This script uses an installation of FFmpeg. Please make sure it is installed to `C:\Program Files\ffmpeg` or replace the ffmpeg_bin and ffprobe_bin variables in the scripts with where your version is installed.
