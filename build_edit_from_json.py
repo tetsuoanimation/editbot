@@ -14,12 +14,16 @@ def build_edit(
     edit_output_name,
     logo_path,
     fps,
-    subfolders = False
+    studio_name = None,
+    director_name =None,
+    subfolders = False,
     ):
 
     base_config = Config(
         ffmpeg_bin=ffmpeg_bin,
         ffprobe_bin=ffprobe_bin,
+        studio_name = studio_name,
+        director_name =director_name,
         name=name,
         default_pass_name=pass_name,
         enable_shotmask=True,
@@ -70,6 +74,8 @@ if __name__ == "__main__":
         edit_desc_name=edit_desc_name, 
         edit_output_path=edit_output_path, 
         edit_output_name=edit_output_name,
+        studio_name='Tetsuo Animation Studio',
+        director_name='Chris Unterberg',
         name = 'Folder Edit',
         pass_name = 'Folder Preview',
         folder = foldername,

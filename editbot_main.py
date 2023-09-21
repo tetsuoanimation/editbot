@@ -11,6 +11,8 @@ class Config:
     shot_mask_logo_path: str
     clip_frame_handles: int
     name: str='Edit'
+    studio_name: str=None
+    director_name: str=None
     default_pass_name: str='latest pass'
     force_pass: bool=False #this forces the location to use the pass name
     enable_shotmask: bool=True
@@ -628,19 +630,27 @@ class Edit:
         source_folder_format = self.source_folder if len(str(self.source_folder))<35 else Path(*Path(str(self.source_folder)).parts[-5:])
         shot_desc_path_format = self.shot_desc_path if len(self.shot_desc_path)<35 else Path(*Path(self.shot_desc_path).parts[-2:])
         print(f"Building autoslate:\n\t{source_folder_format}\n\t{shot_desc_path_format}")
+
+        slate_notes = [
+                "Size: {} x {}".format(self.config.clip_size[0], self.config.clip_size[1]),
+                "FPS: {}".format(self.fps),
+                "Pass: {}".format(self.config.default_pass_name),
+                "Source: {}".format(str(shot_desc_path_format).replace('\\', '\\\\\\\\')),
+                "Footage Source: {}".format(str(source_folder_format).replace('\\', '\\\\\\\\'))
+            ]
+        if self.config.director_name:
+            slate_notes.insert(0,"Lead: {}".format(self.config.director_name))
+        if self.config.studio_name:
+            slate_notes.insert(0,"Studio: {}".format(self.config.studio_name))
+            
         slate=Slate(
             config=self.config,
             title=self.name,
-            notes=[
-                "size: {} x {}".format(self.config.clip_size[0], self.config.clip_size[1]),
-                "fps: {}".format(self.fps),
-                "pass: {}".format(self.config.default_pass_name),
-                "Source: {}".format(str(shot_desc_path_format).replace('\\', '\\\\\\\\')),
-                "Footage Source: {}".format(str(source_folder_format).replace('\\', '\\\\\\\\'))
-            ],
+            notes=slate_notes,
             duration=duration,
             pass_name=self.config.default_pass_name
         )
+
         self.addClip(slate, sequential=False, index=0)
 
     def addClip(self, clip: Clip, sequential: bool=True, index=None):
