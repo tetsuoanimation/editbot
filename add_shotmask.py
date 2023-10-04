@@ -1,3 +1,5 @@
+# run in a folder with .mp4 files like this: python W:\04_PersonalProjects\Chris\00_Miniprojects\editbot\add_shotmask.py -i . -o ./output -p Animation -fps 30 
+
 from editbot_main import *
 import os, copy, argparse
 
@@ -83,14 +85,6 @@ def list_video_files_in_folder(foldername, ext=".mp4"):
 
 if __name__ == "__main__":
 
-    # folder = r"E:\01_Work\00_Sandbox\convert_with_mask"
-    # edit_output_path=r"E:\01_Work\00_Sandbox\convert_with_mask\converted"
-    # out_fps = 30
-    # studio_name = 'Tetsuo Animation Studio'
-    # director_name = 'Chris Unterberg'
-    # name = 'Animation'
-    # pass_name = 'Animation'
-
     parser = argparse.ArgumentParser(
                     prog='Automatic Shotmask Renderer',
                     description='Renders a shotmask with shot name and framecounter and some other information onto all videofiles in a folder')
@@ -117,9 +111,9 @@ if __name__ == "__main__":
 
     for videofile in list_video_files_in_folder(folder):
         edit_output_name=f"{os.path.splitext(os.path.basename(videofile))[0]}_shotmask.mp4"
-        print(videofile)
-        print(edit_output_name)
-        print(edit_output_path)
+        # print(videofile)
+        # print(edit_output_name)
+        # print(edit_output_path)
         build_edit( 
             video_filename = videofile,
             edit_output_path=edit_output_path, 
