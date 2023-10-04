@@ -1,5 +1,5 @@
 from editbot_main import *
-import os, copy
+import os, copy, argparse
 
 ffmpeg_bin=r"C:\Program Files\ffmpeg\bin\ffmpeg.exe"
 ffprobe_bin=r"C:\Program Files\ffmpeg\bin\ffprobe.exe"
@@ -83,9 +83,37 @@ def list_video_files_in_folder(foldername, ext=".mp4"):
 
 if __name__ == "__main__":
 
-    folder = r"E:\01_Work\00_Sandbox\convert_with_mask"
+    # folder = r"E:\01_Work\00_Sandbox\convert_with_mask"
+    # edit_output_path=r"E:\01_Work\00_Sandbox\convert_with_mask\converted"
+    # out_fps = 30
+    # studio_name = 'Tetsuo Animation Studio'
+    # director_name = 'Chris Unterberg'
+    # name = 'Animation'
+    # pass_name = 'Animation'
 
-    edit_output_path=r"E:\01_Work\00_Sandbox\convert_with_mask\converted"
+    parser = argparse.ArgumentParser(
+                    prog='Automatic Shotmask Renderer',
+                    description='Renders a shotmask with shot name and framecounter and some other information onto all videofiles in a folder')
+    parser.add_argument("--inputfolder", "-i", type=str, required=True)
+    parser.add_argument("--outputfolder", "-o", type=str, required=True)
+    parser.add_argument("--pass_name", "-p", type=str, default="")
+    parser.add_argument("--frames_per_second", "-fps", type=int, default=24)
+    parser.add_argument("--studio_name", "-n:s", type=str, default="")
+    parser.add_argument("--director_name", "-n:d", default="")
+    parser.add_argument("--name", "-n", type=str, default="")
+
+    args = parser.parse_args()
+    folder = args.inputfolder
+    edit_output_path= args.outputfolder
+    out_fps = args.frames_per_second
+    studio_name = args.studio_name
+    director_name = args.director_name
+    name = args.name
+    pass_name = args.pass_name
+
+    if not os.path.exists(edit_output_path):
+        print(f"Outputfolder did not exist, creating {os.path.abspath(edit_output_path)}")
+        os.mkdir(os.path.abspath(edit_output_path))
 
     for videofile in list_video_files_in_folder(folder):
         edit_output_name=f"{os.path.splitext(os.path.basename(videofile))[0]}_shotmask.mp4"
@@ -96,11 +124,11 @@ if __name__ == "__main__":
             video_filename = videofile,
             edit_output_path=edit_output_path, 
             edit_output_name=edit_output_name,
-            studio_name='Tetsuo Animation Studio',
-            director_name='Chris Unterberg',
-            name = 'Animation',
-            pass_name = 'Animation',
+            studio_name=studio_name,
+            director_name=director_name,
+            name = name,
+            pass_name = pass_name,
             folder = folder,
             logo_path=os.path.join(os.path.dirname(__file__),"res","ta_logo_new.png"),
-            fps=30
+            fps=out_fps
             )
